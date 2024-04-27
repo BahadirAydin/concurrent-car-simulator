@@ -4,8 +4,8 @@
 
 class Ferry : public Monitor {
   public:
-    int travelTime{};
-    int maxWaitTime{};
+    int travel_time{};
+    int max_wait_time{};
     int capacity{};
 };
 
