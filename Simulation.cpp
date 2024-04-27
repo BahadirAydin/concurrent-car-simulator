@@ -1,4 +1,4 @@
-#include "Parser.h"
+#include "Simulation.h"
 
 void Simulation::readSimulationInput() {
     int numNarrowBridges = 0;
@@ -9,13 +9,14 @@ void Simulation::readSimulationInput() {
     std::cin >> numNarrowBridges;
     narrowBridges.resize(numNarrowBridges);
     for (int i = 0; i < numNarrowBridges; ++i) {
-        std::cin >> narrowBridges[i].travelTime >> narrowBridges[i].maxWaitTime;
+        std::cin >> narrowBridges[i].travel_time >>
+            narrowBridges[i].max_wait_time;
     }
 
     std::cin >> numFerries;
     ferries.resize(numFerries);
     for (int i = 0; i < numFerries; ++i) {
-        std::cin >> ferries[i].travelTime >> ferries[i].maxWaitTime >>
+        std::cin >> ferries[i].travel_time >> ferries[i].max_wait_time >>
             ferries[i].capacity;
     }
 
@@ -32,6 +33,7 @@ void Simulation::readSimulationInput() {
         int carTravelTime = 0;
         std::cin >> carTravelTime >> carPathCount;
         cars[i].travel_time = carTravelTime;
+        cars[i].id = i;
         for (int j = 0; j < carPathCount; j++) {
             std::string pathCode;
             std::cin >> pathCode;
@@ -48,4 +50,26 @@ void Simulation::readSimulationInput() {
             cars[i].path.push_back(path);
         }
     }
+}
+
+void Simulation::createCarThreads() {
+    std::vector<pthread_t> threads(cars.size());
+    for (size_t i = 0; i < cars.size(); ++i) {
+        auto *args = new CarSimulationArgs{&cars[i], this};
+        pthread_create(&threads[i], NULL, simulateCar, args);
+    }
+
+    for (auto &thread : threads) {
+        pthread_join(thread, NULL);
+    }
+}
+
+auto Simulation::simulateCar(void *arg) -> void * {
+    CarSimulationArgs *args = static_cast<CarSimulationArgs *>(arg);
+    Car *car = args->car;
+    Simulation *simulation = args->simulation;
+
+    car->simulate(simulation->narrowBridges, simulation->ferries,
+                  simulation->crossroads);
+    return nullptr;
 }
