@@ -1,4 +1,9 @@
+#include "Parser.h"
 #include "WriteOutput.h"
-#include "helper.h"
-#include "monitor.h"
-auto main() -> int { return 0; }
+
+auto main() -> int {
+    InitWriteOutput();
+    Simulation sim;
+    sim.readSimulationInput();
+    return 0;
+}
