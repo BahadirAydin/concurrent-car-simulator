@@ -1,43 +1,45 @@
 #ifndef __MONITOR_H
 #define __MONITOR_H
-#include<pthread.h>
+#include <pthread.h>
 
-//! A base class to help deriving monitor like classes 
+//! A base class to help deriving monitor like classes
 class Monitor {
-    pthread_mutex_t  mut;   // this will protect the monitor
-public:
-    Monitor() {
-        pthread_mutex_init(&mut, NULL);
-    }
+    pthread_mutex_t mut; // this will protect the monitor
+  public:
+    Monitor() { pthread_mutex_init(&mut, NULL); }
     class Condition {
         Monitor *owner;
         pthread_cond_t cond;
-    public:
-        Condition(Monitor *o) {     // we need monitor ptr to access the mutex
-                owner = o;
-                pthread_cond_init(&cond, NULL) ; 
+
+      public:
+        Condition(Monitor *o) { // we need monitor ptr to access the mutex
+            owner = o;
+            pthread_cond_init(&cond, NULL);
         }
-        void wait() {  pthread_cond_wait(&cond, &owner->mut);}
-        int timedwait(struct timespec *abstime) { return pthread_cond_timedwait(&cond, &owner->mut, abstime); }
-        void notify() { pthread_cond_signal(&cond);}
-        void notifyAll() { pthread_cond_broadcast(&cond);}
+        void wait() { pthread_cond_wait(&cond, &owner->mut); }
+        int timedwait(struct timespec *abstime) {
+            return pthread_cond_timedwait(&cond, &owner->mut, abstime);
+        }
+        void notify() { pthread_cond_signal(&cond); }
+        void notifyAll() { pthread_cond_broadcast(&cond); }
     };
     class Lock {
         Monitor *owner;
-    public:
+
+      public:
         Lock(Monitor *o) { // we need monitor ptr to access the mutex
             owner = o;
             pthread_mutex_lock(&owner->mut); // lock on creation
         }
-        ~Lock() { 
+        ~Lock() {
             pthread_mutex_unlock(&owner->mut); // unlock on destruct
         }
-        void lock() { pthread_mutex_lock(&owner->mut);}
-        void unlock() { pthread_mutex_unlock(&owner->mut);}
+        void lock() { pthread_mutex_lock(&owner->mut); }
+        void unlock() { pthread_mutex_unlock(&owner->mut); }
     };
 };
 
-// when following is used as a local variable the 
+// when following is used as a local variable the
 // method becomes a monitor method. On constructor
 // lock is acquired, when function returns, automatically
 // called desctructor unlocks it
@@ -74,4 +76,3 @@ public:
 };
 */
 #endif
-
