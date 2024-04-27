@@ -1,3 +1,4 @@
 all:
 	gcc -c -o WriteOutput.o WriteOutput.c
-	g++ -o simulator *.cpp WriteOutput.o -lpthread -std=c++17
+	gcc -c -o Helper.o helper.c
+	g++ -o simulator *.cpp WriteOutput.o Helper.o -lpthread -std=c++17
