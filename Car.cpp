@@ -1,4 +1,5 @@
 #include "Car.h"
+#include <iostream>
 
 void Car::simulate(std::vector<NarrowBridge> &narrowBridges,
                    std::vector<Ferry> &ferries,
@@ -22,7 +23,7 @@ void Car::simulate(std::vector<NarrowBridge> &narrowBridges,
         }
 
         WriteOutput(id, connector_type, p.connectorID, TRAVEL);
-        sleep_milli(travel_time);
+        sleep_milli(this->travel_time);
         WriteOutput(id, connector_type, p.connectorID, ARRIVE);
 
         passConnector(p.type, connector, p.from, p.to);
@@ -33,9 +34,11 @@ void Car::passConnector(ConnectorType type, Connector connector, int from,
                         int to) {
     switch (type) {
     case ConnectorType::NARROWBRIDGE:
+        connector.narrowBridge->addToQueue(this->id, to);
         connector.narrowBridge->enterBridge(this->id, to);
         WriteOutput(id, 'N', to, START_PASSING);
         sleep_milli(connector.narrowBridge->travel_time);
+        connector.narrowBridge->removeFromQueue(this->id, to);
         connector.narrowBridge->leaveBridge(this->id, to);
         WriteOutput(id, 'N', to, FINISH_PASSING);
         break;
