@@ -9,6 +9,7 @@ void Simulation::readSimulationInput() {
     std::cin >> numNarrowBridges;
     narrowBridges.resize(numNarrowBridges);
     for (int i = 0; i < numNarrowBridges; ++i) {
+        narrowBridges[i].id = i;
         std::cin >> narrowBridges[i].travel_time >>
             narrowBridges[i].max_wait_time;
     }
