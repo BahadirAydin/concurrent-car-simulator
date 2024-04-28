@@ -17,6 +17,7 @@ void Simulation::readSimulationInput() {
     std::cin >> numFerries;
     ferries.resize(numFerries);
     for (int i = 0; i < numFerries; ++i) {
+        ferries[i].id = i;
         std::cin >> ferries[i].travel_time >> ferries[i].max_wait_time >>
             ferries[i].capacity;
     }

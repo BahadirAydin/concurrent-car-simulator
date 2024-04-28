@@ -40,6 +40,7 @@ void Car::passConnector(ConnectorType type, Connector connector, int from,
         connector.narrowBridge->leaveBridge(this->id, to);
         break;
     case ConnectorType::FERRY:
+        connector.ferry->enterFerry(this->id, to);
         break;
     case ConnectorType::CROSSROAD:
         break;
