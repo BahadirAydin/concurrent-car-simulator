@@ -36,11 +36,8 @@ void Car::passConnector(ConnectorType type, Connector connector, int from,
     case ConnectorType::NARROWBRIDGE:
         connector.narrowBridge->addToQueue(this->id, to);
         connector.narrowBridge->enterBridge(this->id, to);
-        WriteOutput(id, 'N', to, START_PASSING);
         sleep_milli(connector.narrowBridge->travel_time);
-        connector.narrowBridge->removeFromQueue(this->id, to);
         connector.narrowBridge->leaveBridge(this->id, to);
-        WriteOutput(id, 'N', to, FINISH_PASSING);
         break;
     case ConnectorType::FERRY:
         break;

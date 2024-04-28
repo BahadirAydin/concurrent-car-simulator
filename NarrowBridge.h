@@ -1,19 +1,28 @@
 #ifndef NARROWBRIDGE_H
 #define NARROWBRIDGE_H
+#include "WriteOutput.h"
+#include "helper.h"
 #include "monitor.h"
+#include <iostream>
 #include <pthread.h>
 #include <queue>
 
-class NarrowBridge : public Monitor {
+// Direction is either 0 or 1
+
+class NarrowBridge {
   private:
-    std::queue<int> northQueue{};
-    std::queue<int> southQueue{};
-    Condition direction{this};
+    std::queue<int> oneQueue{};
+    std::queue<int> zeroQueue{};
+    pthread_cond_t zeroCond = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t oneCond = PTHREAD_COND_INITIALIZER;
     int currentDirection{0};
-    bool bridge_empty{true};
     pthread_mutex_t mut;
+    pthread_mutex_t queueMut;
+    bool neutral{true};
+    int lastCarID{};
 
   public:
+    int id{};
     int travel_time{};
     int max_wait_time{};
     void enterBridge(int carID, int direction);
