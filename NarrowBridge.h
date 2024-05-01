@@ -33,6 +33,5 @@ class NarrowBridge {
     void leaveBridge(int carID, int direction);
     void addToQueue(int carID, int direction);
     void removeFromQueue(int carID, int direction);
-    void changeDirection();
 };
 #endif
