@@ -2,6 +2,7 @@
 #define FERRY_H
 #include "WriteOutput.h"
 #include "helper.h"
+#include <ctime>
 #include <iostream>
 #include <pthread.h>
 
@@ -14,6 +15,8 @@ class Ferry {
     int carsOnFerry_1{};
     bool canPass_0{};
     bool canPass_1{};
+    int totalCarsCarried_0{};
+    int totalCarsCarried_1{};
     int id{};
 
     void enterFerry(int carID, int direction);
@@ -22,8 +25,8 @@ class Ferry {
     pthread_mutex_t mut;
     pthread_cond_t waitCond_0 = PTHREAD_COND_INITIALIZER;
     pthread_cond_t waitCond_1 = PTHREAD_COND_INITIALIZER;
-    pthread_cond_t onMoveCond_0 = PTHREAD_COND_INITIALIZER;
-    pthread_cond_t onMoveCond_1 = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t waitToBoard_0 = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t waitToBoard_1 = PTHREAD_COND_INITIALIZER;
 };
 
 #endif

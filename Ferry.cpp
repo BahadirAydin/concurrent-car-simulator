@@ -3,28 +3,43 @@
 void Ferry::enterFerry(int carID, int direction) {
     pthread_mutex_lock(&mut);
     pthread_cond_t &waitCond = direction == 0 ? waitCond_0 : waitCond_1;
-    pthread_cond_t &onMoveCond = direction == 0 ? onMoveCond_0 : onMoveCond_1;
+    pthread_cond_t &waitToBoard =
+        direction == 0 ? waitToBoard_0 : waitToBoard_1;
     bool &canPass = direction == 0 ? canPass_0 : canPass_1;
     int &carsOnFerry = direction == 0 ? carsOnFerry_0 : carsOnFerry_1;
+    int &totalCarsCarried =
+        direction == 0 ? totalCarsCarried_0 : totalCarsCarried_1;
+
+    while (totalCarsCarried > 0) {
+        pthread_cond_wait(&waitToBoard, &mut);
+    }
     carsOnFerry++;
-    if (carsOnFerry == capacity) { // OR max_wait_time is reached TODO
+    if (carsOnFerry == capacity) {
         canPass = true;
-        carsOnFerry = 0;
+        totalCarsCarried = capacity;
         pthread_cond_broadcast(&waitCond);
+        carsOnFerry = 0;
     }
     while (!canPass) {
-        pthread_cond_wait(&waitCond, &mut);
+        struct timespec ts {};
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += max_wait_time / 1000;
+        ts.tv_nsec += (max_wait_time % 1000) * 1000000;
+        int rc = pthread_cond_timedwait(&waitCond, &mut, &ts);
+        if (rc == ETIMEDOUT) {
+            canPass = true;
+            totalCarsCarried = carsOnFerry;
+            pthread_cond_broadcast(&waitCond);
+            carsOnFerry = 0;
+        }
+    }
+    totalCarsCarried--;
+    if (totalCarsCarried == 0) {
+        canPass = false;
+        pthread_cond_broadcast(&waitToBoard);
     }
     pthread_mutex_unlock(&mut);
-
     WriteOutput(carID, 'F', id, START_PASSING);
     sleep_milli(travel_time);
     WriteOutput(carID, 'F', id, FINISH_PASSING);
-    pthread_mutex_lock(&mut);
-    carsOnFerry--;
-    if (carsOnFerry == 0) {
-        canPass = false;
-        pthread_cond_broadcast(&onMoveCond);
-    }
-    pthread_mutex_unlock(&mut);
 }
