@@ -43,7 +43,7 @@ void NarrowBridge::enterBridge(int carID, int direction) {
     if (!neutral && currentDirection == direction && !dirChanged) {
         sleep_milli(PASS_DELAY);
     }
-    WriteOutput(carID, 'N', direction, START_PASSING);
+    WriteOutput(carID, 'N', id, START_PASSING);
     onBridge++;
 
     removeFromQueue(carID, direction);
@@ -56,13 +56,11 @@ void NarrowBridge::enterBridge(int carID, int direction) {
 }
 void NarrowBridge::leaveBridge(int carID, int direction) {
     pthread_mutex_lock(&mut);
-    WriteOutput(carID, 'N', direction, FINISH_PASSING);
+    WriteOutput(carID, 'N', id, FINISH_PASSING);
     onBridge--;
     if (lastCarID == carID && zeroQueue.empty() && oneQueue.empty()) {
         dirChanged = false;
         neutral = true;
-        pthread_cond_broadcast(&zeroCond);
-        pthread_cond_broadcast(&oneCond);
     } else if (lastCarID == carID && zeroQueue.empty()) {
         dirChanged = true;
         currentDirection = 1;
