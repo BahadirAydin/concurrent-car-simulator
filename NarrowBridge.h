@@ -3,6 +3,7 @@
 #include "WriteOutput.h"
 #include "helper.h"
 #include "monitor.h"
+#include <ctime>
 #include <iostream>
 #include <pthread.h>
 #include <queue>
@@ -16,6 +17,9 @@ class NarrowBridge {
     pthread_cond_t zeroCond = PTHREAD_COND_INITIALIZER;
     pthread_cond_t oneCond = PTHREAD_COND_INITIALIZER;
     int currentDirection{0};
+    int onBridge{0};
+    bool timeout{false};
+    bool dirChanged{false};
     pthread_mutex_t mut;
     pthread_mutex_t queueMut;
     bool neutral{true};
