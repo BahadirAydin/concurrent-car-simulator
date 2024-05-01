@@ -43,6 +43,10 @@ void Car::passConnector(ConnectorType type, Connector connector, int from,
         connector.ferry->enterFerry(this->id, to);
         break;
     case ConnectorType::CROSSROAD:
+        connector.crossroad->addToQueue(this->id, from);
+        connector.crossroad->enterCrossroad(this->id, from);
+        sleep_milli(connector.crossroad->travel_time);
+        connector.crossroad->leaveCrossroad(this->id, from);
         break;
     }
 }
