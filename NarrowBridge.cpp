@@ -25,7 +25,8 @@ void NarrowBridge::enterBridge(int carID, int direction) {
                         currentQueue.front() != carID || timeout)) {
         struct timespec ts {};
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += max_wait_time;
+        ts.tv_sec += max_wait_time / 1000;
+        ts.tv_nsec += (max_wait_time % 1000) * 1000000;
         int rc = pthread_cond_timedwait(direction == 0 ? &zeroCond : &oneCond,
                                         &mut, &ts);
         if (rc == ETIMEDOUT) {
