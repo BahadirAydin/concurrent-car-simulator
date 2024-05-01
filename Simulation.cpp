@@ -25,7 +25,8 @@ void Simulation::readSimulationInput() {
     std::cin >> numCrossroads;
     crossroads.resize(numCrossroads);
     for (int i = 0; i < numCrossroads; ++i) {
-        std::cin >> crossroads[i].travelTime >> crossroads[i].maxWaitTime;
+        crossroads[i].id = i;
+        std::cin >> crossroads[i].travel_time >> crossroads[i].max_wait_time;
     }
 
     std::cin >> numCars;
