@@ -25,6 +25,10 @@ void Ferry::enterFerry(int carID, int direction) {
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += max_wait_time / 1000;
         ts.tv_nsec += (max_wait_time % 1000) * 1000000;
+        if (ts.tv_nsec >= 1000000000) {
+            ts.tv_sec += ts.tv_nsec / 1000000000;
+            ts.tv_nsec %= 1000000000;
+        }
         int rc = pthread_cond_timedwait(&waitCond, &mut, &ts);
         if (rc == ETIMEDOUT) {
             canPass = true;
