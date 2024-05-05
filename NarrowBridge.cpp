@@ -8,7 +8,6 @@ void NarrowBridge::addToQueue(int carID, int direction) {
 }
 void NarrowBridge::removeFromQueue(int carID, int direction) {
     std::queue<int> &queue = (direction == 0 ? zeroQueue : oneQueue);
-    std::queue<int> &oppositeQueue = (direction == 1 ? oneQueue : zeroQueue);
     pthread_mutex_lock(&queueMut);
     if (!queue.empty() && queue.front() == carID) {
         queue.pop();
@@ -17,16 +16,26 @@ void NarrowBridge::removeFromQueue(int carID, int direction) {
 }
 
 void NarrowBridge::enterBridge(int carID, int direction) {
-    std::queue<int> &currentQueue = (direction == 0 ? zeroQueue : oneQueue);
-    std::queue<int> &oppositeQueue = (direction == 1 ? oneQueue : zeroQueue);
+    std::queue<int> *currentQueue = (direction == 0 ? &zeroQueue : &oneQueue);
     pthread_mutex_lock(&mut);
 
-    while (!neutral && (currentDirection != direction ||
-                        currentQueue.front() != carID || timeout)) {
+    while (true) {
+
+        pthread_mutex_lock(&queueMut);
+        bool waitCond = !neutral && (currentDirection != direction ||
+                                     currentQueue->front() != carID || timeout);
+        pthread_mutex_unlock(&queueMut);
+        if (!waitCond) {
+            break;
+        }
         struct timespec ts {};
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += max_wait_time / 1000;
         ts.tv_nsec += (max_wait_time % 1000) * 1000000;
+        if (ts.tv_nsec >= 1000000000) {
+            ts.tv_sec += ts.tv_nsec / 1000000000;
+            ts.tv_nsec %= 1000000000;
+        }
         int rc = pthread_cond_timedwait(direction == 0 ? &zeroCond : &oneCond,
                                         &mut, &ts);
         if (rc == ETIMEDOUT) {
@@ -36,6 +45,7 @@ void NarrowBridge::enterBridge(int carID, int direction) {
                 pthread_cond_wait(direction == 0 ? &zeroCond : &oneCond, &mut);
             }
             currentDirection = direction;
+            currentQueue = (direction == 0 ? &zeroQueue : &oneQueue);
             dirChanged = true;
             timeout = false;
         }
@@ -56,11 +66,14 @@ void NarrowBridge::enterBridge(int carID, int direction) {
 }
 void NarrowBridge::leaveBridge(int carID, int direction) {
     pthread_mutex_lock(&mut);
+    pthread_mutex_lock(&queueMut);
     WriteOutput(carID, 'N', id, FINISH_PASSING);
     onBridge--;
     if (lastCarID == carID && zeroQueue.empty() && oneQueue.empty()) {
         dirChanged = false;
         neutral = true;
+        pthread_cond_broadcast(&zeroCond);
+        pthread_cond_broadcast(&oneCond);
     } else if (lastCarID == carID && zeroQueue.empty()) {
         dirChanged = true;
         currentDirection = 1;
@@ -70,5 +83,6 @@ void NarrowBridge::leaveBridge(int carID, int direction) {
         currentDirection = 0;
         pthread_cond_broadcast(&zeroCond);
     }
+    pthread_mutex_unlock(&queueMut);
     pthread_mutex_unlock(&mut);
 }
