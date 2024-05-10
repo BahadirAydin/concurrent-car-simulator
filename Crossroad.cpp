@@ -19,7 +19,7 @@ void Crossroad::enterCrossroad(int carID, int direction) {
     std::queue<int> *currentQueue = &queues[direction];
     pthread_cond_t *currentCond = &conds[direction];
     pthread_mutex_lock(&mut);
-
+    bool resetTimer = false;
     while (true) {
         pthread_mutex_lock(&queueMut);
         int frontID = currentQueue->front();
@@ -36,8 +36,8 @@ void Crossroad::enterCrossroad(int carID, int direction) {
             frontID = currentQueue->front();
             pthread_mutex_unlock(&queueMut);
             waitCond = !neutral && (currentDirection != direction ||
-                                        frontID != carID || timeout);            
-            if(!waitCond){
+                                    frontID != carID || timeout);
+            if (!waitCond) {
                 break;
             }
         }
@@ -57,7 +57,8 @@ void Crossroad::enterCrossroad(int carID, int direction) {
                 pthread_cond_wait(currentCond, &mut);
             }
             pthread_mutex_lock(&queueMut);
-            int j = direction;
+            int j = currentDirection;
+            bool allEmpty = true;
             for (int i = 0; i < 3; i++) {
                 j++;
                 j %= 4;
@@ -67,11 +68,20 @@ void Crossroad::enterCrossroad(int carID, int direction) {
                     currentQueue = &queues[j];
                     currentCond = &conds[j];
                     dirChanged = true;
+                    allEmpty = false;
                     break;
                 }
             }
             pthread_mutex_unlock(&queueMut);
+            if (allEmpty) {
+                dirChanged = false;
+                neutral = true;
+            }
+            for (int i = 0; i < 4; i++) {
+                pthread_cond_broadcast(&conds[i]);
+            }
             timeout = false;
+            pthread_cond_broadcast(currentCond);
         }
     }
     WriteOutput(carID, 'C', id, START_PASSING);
@@ -91,11 +101,10 @@ void Crossroad::leaveCrossroad(int carID, int direction) {
     onBridge--;
     bool allEmpty = true;
     if (onBridge == 0 && timeout) {
-        for(int i = 0; i < 4; i++){
+        for (int i = 0; i < 4; i++) {
             pthread_cond_broadcast(&conds[i]);
         }
-    }
-    else if (lastCarID == carID) {
+    } else if (lastCarID == carID) {
         pthread_mutex_lock(&queueMut);
         int j = direction;
         for (int i = 0; i < 4; i++) {
