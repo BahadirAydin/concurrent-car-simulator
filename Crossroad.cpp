@@ -37,16 +37,18 @@ void Crossroad::enterCrossroad(int carID, int direction) {
             ts.tv_nsec %= 1000000000;
         }
         int rc = pthread_cond_timedwait(currentCond, &mut, &ts);
-        if (rc == ETIMEDOUT) {
+        if (rc == ETIMEDOUT && !timeout) {
             // wait for the bridge to be empty then change direction
             timeout = true;
             while (onBridge > 0) {
                 pthread_cond_wait(currentCond, &mut);
             }
+            if (currentDirection != direction){
             currentDirection = direction;
             currentQueue = &queues[direction];
             currentCond = &conds[direction];
             dirChanged = true;
+            }
             timeout = false;
         }
     }
@@ -69,7 +71,14 @@ void Crossroad::leaveCrossroad(int carID, int direction) {
     WriteOutput(carID, 'C', direction, FINISH_PASSING);
     onBridge--;
     bool allEmpty = true;
-    if (lastCarID == carID) {
+    if (onBridge == 0 && timeout) {
+        for(int i = 0; i < 4; i++){
+            if(i != currentDirection){
+                pthread_cond_broadcast(&conds[i]);
+            }
+        }
+    }
+    else if (lastCarID == carID) {
         pthread_mutex_lock(&queueMut);
         int j = direction;
         for (int i = 0; i < 4; i++) {
