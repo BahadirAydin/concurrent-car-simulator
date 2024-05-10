@@ -56,12 +56,21 @@ void Crossroad::enterCrossroad(int carID, int direction) {
             while (onBridge > 0) {
                 pthread_cond_wait(currentCond, &mut);
             }
-            if (currentDirection != direction){
-            currentDirection = direction;
-            currentQueue = &queues[direction];
-            currentCond = &conds[direction];
-            dirChanged = true;
+            pthread_mutex_lock(&queueMut);
+            int j = direction;
+            for (int i = 0; i < 3; i++) {
+                j++;
+                j %= 4;
+                bool empty = queues[j].empty();
+                if (!empty) {
+                    currentDirection = j;
+                    currentQueue = &queues[j];
+                    currentCond = &conds[j];
+                    dirChanged = true;
+                    break;
+                }
             }
+            pthread_mutex_unlock(&queueMut);
             timeout = false;
         }
     }
