@@ -19,7 +19,6 @@ void NarrowBridge::removeFromQueue(int carID, int direction) {
 void NarrowBridge::enterBridge(int carID, int direction) {
     std::queue<int> *currentQueue = (direction == 0 ? &zeroQueue : &oneQueue);
     pthread_mutex_lock(&mut);
-
     while (true) {
         pthread_mutex_lock(&queueMut);
         int frontID = currentQueue->front();
@@ -27,7 +26,19 @@ void NarrowBridge::enterBridge(int carID, int direction) {
         bool waitCond = !neutral && (currentDirection != direction ||
                                      frontID != carID || timeout);
         if (!waitCond) {
-            break;
+            if (!neutral && currentDirection == direction && !dirChanged) {
+                pthread_mutex_unlock(&mut);
+                sleep_milli(PASS_DELAY);
+                pthread_mutex_lock(&mut);
+            }
+            pthread_mutex_lock(&queueMut);
+            frontID = currentQueue->front();
+            pthread_mutex_unlock(&queueMut);
+            waitCond = !neutral && (currentDirection != direction ||
+                                        frontID != carID || timeout);            
+            if(!waitCond){
+                break;
+            }
         }
         struct timespec ts {};
         clock_gettime(CLOCK_REALTIME, &ts);
@@ -53,18 +64,16 @@ void NarrowBridge::enterBridge(int carID, int direction) {
             timeout = false;
         }
     }
-    if (!neutral && currentDirection == direction && !dirChanged) {
-        sleep_milli(PASS_DELAY);
-    }
+
     WriteOutput(carID, 'N', id, START_PASSING);
     onBridge++;
 
     removeFromQueue(carID, direction);
-    pthread_cond_broadcast(direction == 0 ? &zeroCond : &oneCond);
-    lastCarID = carID;
     currentDirection = direction;
+    lastCarID = carID;
     dirChanged = false;
     neutral = false;
+    pthread_cond_broadcast(direction == 0 ? &zeroCond : &oneCond);
     pthread_mutex_unlock(&mut);
 }
 void NarrowBridge::leaveBridge(int carID, int direction) {
@@ -73,7 +82,9 @@ void NarrowBridge::leaveBridge(int carID, int direction) {
     WriteOutput(carID, 'N', id, FINISH_PASSING);
     onBridge--;
     if (onBridge == 0 && timeout) {
-        pthread_cond_broadcast(currentDirection == 0 ? &oneCond : &zeroCond);
+        dirChanged = false;
+        pthread_cond_broadcast(&zeroCond);
+        pthread_cond_broadcast(&oneCond);
     } else if (lastCarID == carID && zeroQueue.empty() && oneQueue.empty()) {
         dirChanged = false;
         neutral = true;

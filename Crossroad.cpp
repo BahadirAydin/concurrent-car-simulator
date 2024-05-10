@@ -22,11 +22,24 @@ void Crossroad::enterCrossroad(int carID, int direction) {
 
     while (true) {
         pthread_mutex_lock(&queueMut);
-        bool waitCond = !neutral && (currentDirection != direction ||
-                                     currentQueue->front() != carID || timeout);
+        int frontID = currentQueue->front();
         pthread_mutex_unlock(&queueMut);
+        bool waitCond = !neutral && (currentDirection != direction ||
+                                     frontID != carID || timeout);
         if (!waitCond) {
-            break;
+            if (!neutral && currentDirection == direction && !dirChanged) {
+                pthread_mutex_unlock(&mut);
+                sleep_milli(PASS_DELAY);
+                pthread_mutex_lock(&mut);
+            }
+            pthread_mutex_lock(&queueMut);
+            frontID = currentQueue->front();
+            pthread_mutex_unlock(&queueMut);
+            waitCond = !neutral && (currentDirection != direction ||
+                                        frontID != carID || timeout);            
+            if(!waitCond){
+                break;
+            }
         }
         struct timespec ts {};
         clock_gettime(CLOCK_REALTIME, &ts);
@@ -36,8 +49,8 @@ void Crossroad::enterCrossroad(int carID, int direction) {
             ts.tv_sec += ts.tv_nsec / 1000000000;
             ts.tv_nsec %= 1000000000;
         }
-        int rc = pthread_cond_timedwait(currentCond, &mut, &ts);
-        if (rc == ETIMEDOUT && !timeout) {
+        int ret = pthread_cond_timedwait(currentCond, &mut, &ts);
+        if (ret == ETIMEDOUT && !timeout) {
             // wait for the bridge to be empty then change direction
             timeout = true;
             while (onBridge > 0) {
@@ -52,9 +65,6 @@ void Crossroad::enterCrossroad(int carID, int direction) {
             timeout = false;
         }
     }
-    if (!neutral && currentDirection == direction && !dirChanged) {
-        sleep_milli(PASS_DELAY);
-    }
     WriteOutput(carID, 'C', id, START_PASSING);
     onBridge++;
 
@@ -68,14 +78,12 @@ void Crossroad::enterCrossroad(int carID, int direction) {
 }
 void Crossroad::leaveCrossroad(int carID, int direction) {
     pthread_mutex_lock(&mut);
-    WriteOutput(carID, 'C', direction, FINISH_PASSING);
+    WriteOutput(carID, 'C', id, FINISH_PASSING);
     onBridge--;
     bool allEmpty = true;
     if (onBridge == 0 && timeout) {
         for(int i = 0; i < 4; i++){
-            if(i != currentDirection){
-                pthread_cond_broadcast(&conds[i]);
-            }
+            pthread_cond_broadcast(&conds[i]);
         }
     }
     else if (lastCarID == carID) {
@@ -96,9 +104,6 @@ void Crossroad::leaveCrossroad(int carID, int direction) {
         if (allEmpty) {
             dirChanged = false;
             neutral = true;
-            for (int i = 0; i < 4; i++) {
-                pthread_cond_broadcast(&conds[i]);
-            }
         }
         pthread_mutex_unlock(&queueMut);
     }
